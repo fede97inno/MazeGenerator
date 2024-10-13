@@ -51,3 +51,10 @@ class MazeGenerator:
     def print_maze(self):
         for row in self.maze:
             print(' '.join(str(cell) for cell in row))
+
+    def get_maze(self):
+        string_maze = []
+        for row in self.maze:
+            string_maze.append(' '.join(str(cell) for cell in row))
+
+        return string_maze
