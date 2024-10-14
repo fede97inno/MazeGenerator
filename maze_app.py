@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from maze_generator import MazeGenerator
 
 # root is the window where we want to add the widgets
@@ -8,6 +8,7 @@ class MazeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Maze Generator App")
+        self.maze = []
 
         # Label and input for maze stats
         # Label create the field with text
@@ -32,6 +33,11 @@ class MazeApp:
         self.maze_canvas = tk.Canvas(root, width = 400, height = 400, bg = "black")
         self.maze_canvas.grid(row = 1, column = 4, columnspan = 2, padx = 10, pady = 10)
 
+        # Button for exporting the maze in txt file
+
+        self.export_button = tk.Button(root, text = "Export", command = self.export_maze)
+        self.export_button.grid(row = 2, column = 0, columnspan = 2, padx = 10, pady = 10)
+        
     def generate_maze(self):
         width = self.width_entry.get()
         height = self.height_entry.get()
@@ -41,10 +47,10 @@ class MazeApp:
             return
 
         generator = MazeGenerator(int(width), int(height))
-        maze = generator.generate_maze()
+        self.maze = generator.generate_maze()
 
         self.maze_canvas.delete("all")
-        self.draw_maze(maze)
+        self.draw_maze(self.maze)
 
     def draw_maze(self, maze):
         cell_size = 20      # Cell dimension in pixels
@@ -71,3 +77,18 @@ class MazeApp:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "white")
                 elif maze[r][c] == 0:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "black")
+    
+    def export_maze(self):
+        file_path = filedialog.asksaveasfilename(defaultextension = ".txt", filetypes = [("Text files", "*.txt")])
+
+        if file_path:
+            try:
+                with open(file_path, 'w') as file:
+                    for row in self.maze:
+                        file.write(' '.join(map(str, row))+ '\n')
+                
+                messagebox.showinfo("Succes", "Maze exported successfully!")
+            except Exception as e:
+                messagebox.showinfo("Error", f"Failed to export maze: {e}!")
+                
+                    
