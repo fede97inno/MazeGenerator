@@ -49,8 +49,16 @@ class MazeApp:
     def draw_maze(self, maze):
         cell_size = 20      # Cell dimension in pixels
 
+        # 400 / rows if row > col, col if row < col
+
         rows = len(maze)
         cols = len(maze[0])
+
+        if rows > 20 or cols > 20:
+            if rows > cols:
+                cell_size = 400 / rows
+            else:
+                cell_size = 400 / cols
 
         for r in range(rows):
             for c in range(cols):
@@ -63,6 +71,3 @@ class MazeApp:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "white")
                 elif maze[r][c] == 0:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "black")
-
-        
-            
