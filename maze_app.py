@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from maze_generator import MazeGenerator
+from generic import Vector2
 
 """
     TODO : Try to refactor the code with self.dimensions to prevent using multiple calls to entry.get() -> DONE
          : Add entrance and exit for the maze with a pop up menu when right clicking on the canvas
          : Add a pathfindinf algorithm to resolve the maze given the entrance and the exit
+         : Refactor the code for drawing anytime the maze is updated
 """
 # root is the window where we want to add the widgets
 
@@ -14,9 +16,15 @@ class MazeApp:
         self.root = root
         self.root.title("Maze Generator App")
         self.maze = []
-        self.cell_size = 20
         self.width = 0
         self.height = 0
+        self.cell_size = 20
+        
+        self.click_x = None
+        self.click_y = None
+
+        self.entrance = Vector2(None, None)
+        self.exit = Vector2(None, None)
 
         # Label and input for maze stats
         # Label create the field with text
@@ -43,10 +51,16 @@ class MazeApp:
 
         # Event for clicking in the canvas
         self.maze_canvas.bind("<Button-1>", self.on_canvas_click)
-        
+        self.maze_canvas.bind("<Button-3>", self.show_drop_down_menu)
+
         # Button for exporting the maze in txt file
         self.export_button = tk.Button(root, text = "Export", command = self.export_maze)
         self.export_button.grid(row = 2, column = 0, columnspan = 2, padx = 10, pady = 10)
+
+        # Context Menu for placing the entrance and the exit of the maze
+        self.drop_down_menu = tk.Menu(self.root, tearoff = 0)
+        self.drop_down_menu.add_command(label = "Place Entrance", command = lambda: self.set_entrance_exit("entrance"))
+        self.drop_down_menu.add_command(label = "Place Exit", command = lambda : self.set_entrance_exit("exit"))
 
     def generate_maze(self):
         if not self.width_entry.get().isdigit() or not self.height_entry.get().isdigit():
@@ -65,20 +79,26 @@ class MazeApp:
             return
         
         generator = MazeGenerator(self.width, self.height)
+        
         self.maze = generator.generate_maze()
+        self.draw_maze()
 
+        self.entrance.x = None
+        self.entrance.y = None
+        self.exit.x = None
+        self.exit.y = None
+
+    def draw_maze(self):
         self.maze_canvas.delete("all")
-        self.draw_maze(self.maze)
+        
+        rows = len(self.maze)
+        cols = len(self.maze[0])
 
-    def draw_maze(self, maze):
-        rows = len(maze)
-        cols = len(maze[0])
-
-        if rows > 20 or cols > 20:
-            if rows > cols:
-                self.cell_size = 400 / rows
-            else:
-                self.cell_size = 400 / cols
+#        if rows > 20 or cols > 20:
+        if rows > cols:
+            self.cell_size = 400 / rows
+        else:
+            self.cell_size = 400 / cols
 
         for r in range(rows):
             for c in range(cols):
@@ -87,10 +107,14 @@ class MazeApp:
                 y1 = r * self.cell_size
                 y2 = y1 + self.cell_size
 
-                if maze[r][c] == 1:
+                if self.maze[r][c] == 1:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "white")
-                elif maze[r][c] == 0:
+                elif self.maze[r][c] == 0:
                     self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "black")
+                elif self.maze[r][c] == 2:
+                    self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "green")
+                elif self.maze[r][c] == 3:
+                    self.maze_canvas.create_rectangle(x1, y1, x2, y2, fill = "red")
     
     def on_canvas_click(self, event):
         if len(self.maze) == 0 or len(self.maze[0]) == 0:
@@ -102,10 +126,12 @@ class MazeApp:
         if 0 < row < self.height and 0 < col < self.width:
             if self.maze[row][col] == 1:
                 self.maze[row][col] = 0
-                self.maze_canvas.create_rectangle(col * self.cell_size, row * self.cell_size, (col + 1) * self.cell_size, (row + 1) * self.cell_size, fill = "black")
+                #self.maze_canvas.create_rectangle(col * self.cell_size, row * self.cell_size, (col + 1) * self.cell_size, (row + 1) * self.cell_size, fill = "black")
+                self.draw_maze()
             else:
                 self.maze[row][col] = 1
-                self.maze_canvas.create_rectangle(col * self.cell_size, row * self.cell_size, (col + 1) * self.cell_size, (row + 1) * self.cell_size, fill = "white")
+                #self.maze_canvas.create_rectangle(col * self.cell_size, row * self.cell_size, (col + 1) * self.cell_size, (row + 1) * self.cell_size, fill = "white")
+                self.draw_maze()
 
     def export_maze(self):
         file_path = filedialog.asksaveasfilename(defaultextension = ".txt", filetypes = [("Text files", "*.txt")])
@@ -122,3 +148,47 @@ class MazeApp:
                 messagebox.showinfo("Succes", "Maze exported successfully!")
             except Exception as e:
                 messagebox.showinfo("Error", f"Failed to export maze: {e}!")
+
+    def show_drop_down_menu(self, event):
+        self.click_x = event.x
+        self.click_y = event.y
+
+        self.drop_down_menu.post(event.x_root, event.y_root)
+
+    def set_entrance_exit(self, type_):
+        col = int(self.click_x // self.cell_size)
+        row = int(self.click_y // self.cell_size)
+
+        if self.maze[row][col] == 1:
+            return
+
+        if type_ == "entrance":
+            if col == self.entrance.x and row == self.entrance.y:
+                return
+
+            self.maze[row][col] = 2
+
+            old_x = self.entrance.x     # col -> x
+            old_y = self.entrance.y     # row -> y
+
+            self.entrance.x = row
+            self.entrance.y = col
+
+            if old_x != None and old_y != None:
+                self.maze[old_x][old_y] = 0
+        elif type_ == "exit":
+            if col == self.exit.x and row == self.exit.y:
+                return
+
+            self.maze[row][col] = 3
+
+            old_x = self.exit.x
+            old_y = self.exit.y
+
+            self.exit.x = row
+            self.exit.y = col
+
+            if old_x != None and old_y != None:
+                self.maze[old_x][old_y] = 0
+
+        self.draw_maze()
